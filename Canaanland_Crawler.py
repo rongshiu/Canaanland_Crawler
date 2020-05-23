@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[1]:
-
-
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
@@ -15,31 +9,25 @@ import re
 import numpy as np
 
 
-# In[2]:
-
-
+# Get Chrome Driver path and set the crawler to run in headless option
 chrome_options = Options()  
 chrome_options.add_argument("--headless") 
 chrome_path=r"C:\Users\rongshiu\Desktop\chromedriver"
 driver=webdriver.Chrome(chrome_path,options=chrome_options)
 
 
-# In[3]:
-
-
+# Prompt user for url and number of pages within the category for the crawler to loop through
 link=str(input('Please Enter category URLto crawl: ').strip())
 pages=int(input('Please Enter number of pages to iterate over: ').strip())+1
 
 
-# In[ ]:
-
-
+# Use selenium to perform clicking process for each product and bs4 to perform the scrapping after entering the targetted page
 records=[]
 for i in range(1,pages):
     driver.get('{}}/{}'.format(link,i))
     details_containers=driver.find_elements_by_css_selector('div.name>a')
     for details_container in details_containers:
-        ActionChains(driver)         .key_down(Keys.CONTROL)         .click(details_container)         .key_up(Keys.CONTROL)         .perform()
+        ActionChains(driver).key_down(Keys.CONTROL).click(details_container).key_up(Keys.CONTROL).perform()
         current_window = driver.current_window_handle
         new_window = [window for window in driver.window_handles if window != current_window][0]
         driver.switch_to.window(new_window)
@@ -84,9 +72,7 @@ for i in range(1,pages):
             driver.switch_to.window(current_window)
 
 
-# In[ ]:
-
-
+#Store crawled data into a dataframe
 df1=pd.DataFrame(records,columns=['Product Name','Stock Code','Price','Stock','Description','Base Image','Page #'])
 df1['Product Name'].replace('', np.nan, inplace=True)
 df1['Stock'].replace('0', np.nan, inplace=True)
@@ -94,16 +80,9 @@ df1.dropna(subset=['Product Name','Stock'], inplace=True)
 print(df1.head())
 
 
-# In[ ]:
-
-
+# Perform ETL to fit data as per existing DB table format
 df2=pd.DataFrame(columns=['Seller_id','model','sku','description:name:English','description:meta_title:English','description:description:English','quantity','stock_status','stock_status_name','image','shipping','price','tax_class','weight','weight_class','weight_class_name','category'])
-
-
-# In[ ]:
-
-
-df2['description:name:English']=df1['Product Name']
+['description:name:English']=df1['Product Name']
 df2['description:description:English']=df1['Description']
 df2['model']=df1['Stock Code']
 df2['description:meta_title:English']=df2['description:name:English']
@@ -121,9 +100,7 @@ df2['Seller_id']=72
 df2['price']=df1['Price']
 
 
-# In[ ]:
-
-
+# Perform ETL to store Image to a default vendor wkseller/72 prior uploading via FTP
 df2['image']=df1['Base Image'].fillna('')
 def image_format(x):
     list1=re.split(r'/',x)
@@ -138,10 +115,6 @@ def image_format(x):
 df2['image']=df2['image'].apply(image_format)
 df2.to_csv('magazines.csv',encoding='utf-8-sig',index=False)
 driver.quit()
-
-
-# In[ ]:
-
 
 url_list=df1['Base Image'].tolist()
 for url in url_list:
